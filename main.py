@@ -4,35 +4,34 @@ from discord.ext import commands
 from flask import Flask
 from threading import Thread
 
-# Flask (Render維持用)
+# Flask (RenderでスリープさせないためのWebサーバー機能)
 app = Flask(__name__)
 @app.route('/')
-def home(): return "Personnel Management System is running!"
+def home(): return "Personnel Management System is Online."
 
-# Intents
+# Botの設定
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True # メンバー情報取得に必須！
+intents.members = True # メンバー情報の取得に必要
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# --- 機能1: チケット管理 ---
-@bot.command()
-async def ticket(ctx):
-    allowed = ["幹部自衛官", "監察課【ID】--Inspector Division"]
-    if not any(r.name in allowed for r in ctx.author.roles) and not ctx.author.guild_permissions.administrator:
-        return await ctx.send("権限がありません。")
-    
-    view = discord.ui.View()
-    view.add_item(discord.ui.Button(label="チケット作成", style=discord.ButtonStyle.primary, custom_id="create_ticket"))
-    await ctx.send("相談・申請用のチケットを作成します。", view=view)
+@bot.event
+async def on_ready():
+    print(f"{bot.user} が起動しました。")
 
-# --- 機能2: 身分証照会 ---
+# 身分証照会機能
 @bot.command()
 async def info(ctx, member: discord.Member = None):
     target = member or ctx.author
-    ignore_list = ["---------------受講済み-------------------", "----------その他/Other---------", "----------所属/Affiliation---------"]
     
-    # 有効なロール抽出
+    # 無視する仕切りロール
+    ignore_list = [
+        "---------------受講済み-------------------", 
+        "----------その他/Other---------", 
+        "----------所属/Affiliation---------"
+    ]
+    
+    # ロール抽出
     valid_roles = [r.name for r in target.roles if r.name not in ignore_list and r.name != "@everyone"]
     
     rank, dept = "不明", "所属なし"
@@ -45,6 +44,7 @@ async def info(ctx, member: discord.Member = None):
     embed.add_field(name="所属", value=dept, inline=True)
     await ctx.send(embed=embed)
 
+# 実行
 if __name__ == "__main__":
     Thread(target=lambda: app.run(host='0.0.0.0', port=10000)).start()
     bot.run(os.environ["TOKEN"])
