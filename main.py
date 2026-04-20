@@ -2,13 +2,7 @@
 async def info(ctx, member: discord.Member = None):
     target = member or ctx.author
     
-    ignore_list = [
-        "---------------受講済み-------------------", 
-        "----------その他/Other---------", 
-        "----------所属/Affiliation---------"
-    ]
-    
-    # 階級・役職の定義
+    # 階級リスト (ID: 名前)
     rank_roles = {
         1369076295027392613: "巡査", 1369076157026406600: "巡査長",
         1369075849323741419: "巡査部長", 1369075450445303928: "警部補",
@@ -18,7 +12,7 @@ async def info(ctx, member: discord.Member = None):
         1483790641703161887: "隊長・課長"
     }
 
-    # 所属の定義
+    # 所属リスト (ID: 名前)
     dept_roles = {
         1469839939293286400: "刑事課", 1469839945010122772: "交通課",
         1482332775330611231: "地域指導係", 1469838348733517998: "地域課",
@@ -42,10 +36,8 @@ async def info(ctx, member: discord.Member = None):
     ranks = []
     depts = []
 
+    # ホワイトリスト方式に変更：リストに載っているIDのみを抽出する
     for role in target.roles:
-        if role.name in ignore_list or role.name == "@everyone":
-            continue
-        
         if role.id in rank_roles:
             ranks.append(rank_roles[role.id])
         elif role.id in dept_roles:
