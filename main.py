@@ -1,50 +1,58 @@
-import os
-import discord
-from discord.ext import commands
-from flask import Flask
-from threading import Thread
-
-# Flask (RenderでスリープさせないためのWebサーバー機能)
-app = Flask(__name__)
-@app.route('/')
-def home(): return "Personnel Management System is Online."
-
-# Botの設定
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True # メンバー情報の取得に必要
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-@bot.event
-async def on_ready():
-    print(f"{bot.user} が起動しました。")
-
-# 身分証照会機能
 @bot.command()
 async def info(ctx, member: discord.Member = None):
     target = member or ctx.author
     
-    # 無視する仕切りロール
     ignore_list = [
         "---------------受講済み-------------------", 
         "----------その他/Other---------", 
         "----------所属/Affiliation---------"
     ]
     
-    # ロール抽出
-    valid_roles = [r.name for r in target.roles if r.name not in ignore_list and r.name != "@everyone"]
+    # 階級・役職の定義
+    rank_roles = {
+        1369076295027392613: "巡査", 1369076157026406600: "巡査長",
+        1369075849323741419: "巡査部長", 1369075450445303928: "警部補",
+        1369075051264999514: "警部", 1369074311314542662: "警視",
+        1369074017054621707: "警視正", 1369073293918867479: "警視長/警視監",
+        1390954133598769213: "部長", 1490932845634392264: "参事官",
+        1483790641703161887: "隊長・課長"
+    }
+
+    # 所属の定義
+    dept_roles = {
+        1469839939293286400: "刑事課", 1469839945010122772: "交通課",
+        1482332775330611231: "地域指導係", 1469838348733517998: "地域課",
+        1469839423054155900: "白崎署", 1469839437516111912: "山口署",
+        1490599950919405609: "航空隊", 1396775870861148250: "機動隊",
+        1489511872058101950: "警護課", 1396775600663822346: "特殊急襲部隊",
+        1370812196954574888: "警備部", 1397855629611368499: "特殊事件捜査隊",
+        1396776140542181416: "第二方面機動隊", 1369120275093782668: "第一方面機動隊",
+        1369120045883457730: "捜査一課", 1369117562364891247: "刑事部",
+        1369120554656993290: "交通鑑識課", 1369120943472902224: "交通機動隊",
+        1369116976684994632: "交通部", 1369119769080365117: "空港警察",
+        1369119537781407774: "鉄道警察", 1454725598055239945: "通信指令課",
+        1393801666096005180: "遊撃特別警ら隊", 1369119275197006005: "自動車警ら隊",
+        1369116816349200464: "地域部", 1469842787984736460: "教養課",
+        1369123630788640849: "教務部", 1369118961521786880: "装備課",
+        1369116490782998530: "警務部", 1470757182378082495: "広報課",
+        1369118761352826890: "監察課", 1369118431240261674: "人事課",
+        1369116075156832387: "管理部"
+    }
+
+    ranks = []
+    depts = []
+
+    for role in target.roles:
+        if role.name in ignore_list or role.name == "@everyone":
+            continue
+        
+        if role.id in rank_roles:
+            ranks.append(rank_roles[role.id])
+        elif role.id in dept_roles:
+            depts.append(dept_roles[role.id])
+
+    embed = discord.Embed(title=f"【職員身分証】{target.display_name}", color=0x2c3e50)
+    embed.add_field(name="階級・役職", value=", ".join(ranks) if ranks else "なし", inline=False)
+    embed.add_field(name="所属部署", value=", ".join(depts) if depts else "所属なし", inline=False)
     
-    rank, dept = "不明", "所属なし"
-    for r in valid_roles:
-        if "警" in r or "官" in r: rank = r
-        elif r != rank: dept = r
-
-    embed = discord.Embed(title=f"【身分証】{target.display_name}", color=0x2c3e50)
-    embed.add_field(name="階級", value=rank, inline=True)
-    embed.add_field(name="所属", value=dept, inline=True)
     await ctx.send(embed=embed)
-
-# 実行
-if __name__ == "__main__":
-    Thread(target=lambda: app.run(host='0.0.0.0', port=10000)).start()
-    bot.run(os.environ["TOKEN"])
