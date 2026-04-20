@@ -1,18 +1,41 @@
+import os
+import discord
+from discord.ext import commands
+from flask import Flask
+from threading import Thread
+
+app = Flask(__name__)
+@app.route('/')
+def home(): return "Personnel Management System is Online."
+
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+@bot.event
+async def on_ready():
+    print(f"{bot.user} が起動しました。")
+
 @bot.command()
 async def info(ctx, member: discord.Member = None):
     target = member or ctx.author
     
-    # 階級リスト (ID: 名前)
+    # 1. 階級 (rank)
     rank_roles = {
         1369076295027392613: "巡査", 1369076157026406600: "巡査長",
         1369075849323741419: "巡査部長", 1369075450445303928: "警部補",
         1369075051264999514: "警部", 1369074311314542662: "警視",
-        1369074017054621707: "警視正", 1369073293918867479: "警視長/警視監",
+        1369074017054621707: "警視正", 1369073293918867479: "警視長/警視監"
+    }
+
+    # 2. 役職 (job)
+    job_roles = {
         1390954133598769213: "部長", 1490932845634392264: "参事官",
         1483790641703161887: "隊長・課長"
     }
 
-    # 所属リスト (ID: 名前)
+    # 3. 所属 (dept)
     dept_roles = {
         1469839939293286400: "刑事課", 1469839945010122772: "交通課",
         1482332775330611231: "地域指導係", 1469838348733517998: "地域課",
@@ -33,18 +56,20 @@ async def info(ctx, member: discord.Member = None):
         1369116075156832387: "管理部"
     }
 
-    ranks = []
-    depts = []
+    ranks, jobs, depts = [], [], []
 
-    # ホワイトリスト方式に変更：リストに載っているIDのみを抽出する
     for role in target.roles:
-        if role.id in rank_roles:
-            ranks.append(rank_roles[role.id])
-        elif role.id in dept_roles:
-            depts.append(dept_roles[role.id])
+        if role.id in rank_roles: ranks.append(rank_roles[role.id])
+        elif role.id in job_roles: jobs.append(job_roles[role.id])
+        elif role.id in dept_roles: depts.append(dept_roles[role.id])
 
     embed = discord.Embed(title=f"【職員身分証】{target.display_name}", color=0x2c3e50)
-    embed.add_field(name="階級・役職", value=", ".join(ranks) if ranks else "なし", inline=False)
-    embed.add_field(name="所属部署", value=", ".join(depts) if depts else "所属なし", inline=False)
+    embed.add_field(name="階級", value=", ".join(ranks) if ranks else "なし", inline=False)
+    embed.add_field(name="役職", value=", ".join(jobs) if jobs else "なし", inline=False)
+    embed.add_field(name="所属", value=", ".join(depts) if depts else "所属なし", inline=False)
     
     await ctx.send(embed=embed)
+
+if __name__ == "__main__":
+    Thread(target=lambda: app.run(host='0.0.0.0', port=10000)).start()
+    bot.run(os.environ["TOKEN"])
